@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Calendario de Reservas (12 meses)</title>
+  <meta name="theme-color" content="#0b0d12" />
+
+  <style>
+    :root{
+      --bg:#0b0d12; --card:#121621; --muted:#8b93a7; --text:#eef2ff;
+      --line:#232a3b; --accent:#4f7cff; --ok:#29d07f; --bad:#ff4f6d;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; padding:20px;
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:linear-gradient(180deg,#070912, #0b0d12 35%);
+      color:var(--text);
+    }
+
+    /* ===== LAYOUT (RESERVAS MÁS GRANDE QUE CALENDARIO) ===== */
+    .wrap{
+      max-width: 1280px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 0.9fr 1.35fr; /* calendario chico, reservas grande */
+      gap: 16px;
+      align-items: start;
+    }
+
+    .card{
+      background:rgba(18,22,33,.92);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:14px;
+      box-shadow: 0 12px 30px rgba(0,0,0,.35);
+    }
+
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .title{font-weight:800;font-size:18px}
+    .btns{display:flex;gap:8px;flex-wrap:wrap}
+    button{
+      background:#0f1320;color:var(--text);
+      border:1px solid var(--line);
+      padding:10px 12px;border-radius:12px;cursor:pointer;
+    }
+    button:hover{border-color:#3a4667}
+    button.primary{background:var(--accent);border-color:transparent}
+    button.danger{border-color:rgba(255,79,109,.55);color:#ffd6de}
+
+    /* ===== CALENDARIO ===== */
+    .months{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:12px;
+    }
+    .monthCard{
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:9px;
+      background:#0f1320;
+    }
+    .monthHeader{
+      display:flex;align-items:center;justify-content:space-between;
+      margin-bottom:8px;
+    }
+    .monthName{font-weight:800}
+    .legend{font-size:12px;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+    .dow{
+      font-size:11px;color:var(--muted);
+      text-transform:uppercase; letter-spacing:.08em;
+      padding:2px 4px;
+    }
+    .day{
+      min-height:32px;
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:5px;
+      display:flex;align-items:flex-start;justify-content:space-between;
+      background:#0b0f1a;
+      cursor:pointer;
+    }
+    .day:hover{border-color:#3a4667}
+    .day.muted{opacity:.35;cursor:default}
+    .day.selected{outline:2px solid rgba(79,124,255,.75);border-color:transparent}
+    .n{font-weight:800;font-size:12px}
+    .badge{
+      font-size:10px; padding:1px 6px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      color:var(--muted);
+      white-space:nowrap;
+    }
+    .badge.booked{border-color:rgba(41,208,127,.35);color:#b9ffe0}
+
+    /* ===== PANEL RESERVA (GRANDE + PRO) ===== */
+    .card.right{
+      padding:18px;
+      border-radius:18px;
+    }
+    .right h2{
+      margin:0 0 8px 0;
+      font-size:22px;
+      font-weight:900;
+      letter-spacing:.2px;
+    }
+    .sub{color:var(--muted);font-size:14px;margin-bottom:14px}
+
+    label{font-size:12px;color:var(--muted)}
+    input, select{
+      width:100%;
+      background:#0f1320;border:1px solid var(--line);
+      color:var(--text);
+      padding:14px 14px;
+      border-radius:14px;
+      outline:none;
+      font-size:15px;
+    }
+    input:focus, select:focus{border-color:#3a4667}
+    .form{display:grid;gap:12px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .actions{display:flex;gap:10px;flex-wrap:wrap}
+    .actions button{
+      padding:14px 14px;
+      border-radius:14px;
+      font-size:14px;
+      font-weight:800;
+    }
+
+    .msg{font-size:12px;color:var(--muted)}
+    .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;}
+
+    .list{
+      margin-top:14px;
+      border-top:1px solid var(--line);
+      padding-top:14px;
+      display:grid;
+      gap:10px;
+    }
+    #dayList{display:grid;gap:10px}
+    .item{
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:12px 14px;
+      background:#0f1320;
+    }
+    .itemTop{
+      display:flex;justify-content:space-between;gap:10px;align-items:center;
+      font-size:14px;
+    }
+    .pill{
+      font-size:12px;padding:6px 12px;border-radius:999px;
+      border:1px solid var(--line);color:var(--muted);
+      white-space:nowrap;
+    }
+    .pill.ok{border-color:rgba(41,208,127,.35);color:#b9ffe0}
+    .pill.bad{border-color:rgba(255,79,109,.35);color:#ffd6de}
+
+    /* ===== Sticky (desktop) ===== */
+    @media (min-width: 901px){
+      .card.right{
+        position: sticky;
+        top: 16px;
+      }
+    }
+
+    /* ===== Scroll interno (desktop) ===== */
+    @media (min-width: 901px){
+      .card.right{
+        max-height: calc(100vh - 32px);
+        overflow: auto;
+      }
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 1100px){ .months{grid-template-columns:repeat(2,1fr)} }
+    @media (max-width: 900px){
+      .wrap{grid-template-columns:1fr}
+      .months{grid-template-columns:1fr}
+      .row{grid-template-columns:1fr}
+      .card.right{order:-1;} /* reservas arriba en móvil */
+      .card.right{position: static;}
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <section class="card">
+      <div class="topbar">
+        <div class="title" id="yearTitle">Calendario</div>
+        <div class="btns">
+          <button id="prevYear">◀ Año</button>
+          <button id="thisYear">Año actual</button>
+          <button id="nextYear">Año ▶</button>
+          <button id="exportBtn">Exportar JSON</button>
+          <button class="danger" id="clearBtn">Borrar todo</button>
+        </div>
+      </div>
+
+      <div class="months" id="months"></div>
+
+      <p class="msg" style="margin-top:10px">
+        Semana: <b>Lunes → Domingo</b>. Guardado en <span class="mono">localStorage</span>.
+      </p>
+    </section>
+
+    <aside class="card right">
+      <h2>Reserva</h2>
+      <div class="sub" id="selectedLabel">Selecciona un día</div>
+
+      <div class="form">
+        <div>
+          <label>Fecha seleccionada</label>
+          <input id="dateField" disabled placeholder="YYYY-MM-DD" />
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="time">Hora</label>
+            <select id="time"></select>
+          </div>
+          <div>
+            <label for="place">Lugar</label>
+            <input id="place" placeholder="Ej. Hotel Camino Real, CDMX" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="name">Nombre (opcional)</label>
+            <input id="name" placeholder="Ej. Fernando" />
+          </div>
+          <div>
+            <label for="phone">Teléfono (opcional)</label>
+            <input id="phone" placeholder="Ej. 5527729551" inputmode="tel" />
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="primary" id="bookBtn">Reservar</button>
+          <button class="danger" id="cancelBtn">Cancelar (hora)</button>
+        </div>
+
+        <div class="msg" id="status"></div>
+      </div>
+
+      <div class="list">
+        <div class="msg"><b>Reservas del día</b> (por hora)</div>
+        <div id="dayList" class="msg">—</div>
+      </div>
+    </aside>
+  </div>
+
+<script>
+(() => {
+  const STORAGE_KEY = "reservas_calendario_anual_v1";
+  const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  const DOW = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"]; // Lunes a Domingo
+  const HOURS = ["07:00","08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"];
+
+  let reservations = load();
+  let year = new Date().getFullYear();
+  let selectedDate = null;
+
+  const yearTitle = document.getElementById("yearTitle");
+  const monthsEl = document.getElementById("months");
+
+  const selectedLabel = document.getElementById("selectedLabel");
+  const dateField = document.getElementById("dateField");
+  const timeEl = document.getElementById("time");
+  const placeEl = document.getElementById("place");
+  const nameEl = document.getElementById("name");
+  const phoneEl = document.getElementById("phone");
+  const statusEl = document.getElementById("status");
+  const dayListEl = document.getElementById("dayList");
+
+  document.getElementById("prevYear").addEventListener("click", () => { year--; render(); });
+  document.getElementById("nextYear").addEventListener("click", () => { year++; render(); });
+  document.getElementById("thisYear").addEventListener("click", () => { year = new Date().getFullYear(); render(); });
+
+  document.getElementById("bookBtn").addEventListener("click", book);
+  document.getElementById("cancelBtn").addEventListener("click", cancelBooking);
+  document.getElementById("exportBtn").addEventListener("click", exportJSON);
+  document.getElementById("clearBtn").addEventListener("click", clearAll);
+
+  function pad(n){ return String(n).padStart(2,"0"); }
+  function fmtISO(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+
+  function dowMonFirst(d){
+    const js = d.getDay(); // Sun=0..Sat=6
+    return (js + 6) % 7;
+  }
+
+  function load(){
+    try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+    catch{ return {}; }
+  }
+  function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(reservations)); }
+
+  function setStatus(msg, kind=""){
+    statusEl.textContent = msg;
+    statusEl.style.color = kind==="ok" ? "var(--ok)" : kind==="bad" ? "var(--bad)" : "var(--muted)";
+  }
+
+  function escapeHTML(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function render(){
+    yearTitle.textContent = `Calendario de Reservas — ${year}`;
+    monthsEl.innerHTML = "";
+
+    timeEl.innerHTML = "";
+    HOURS.forEach(h => {
+      const opt = document.createElement("option");
+      opt.value = h; opt.textContent = h;
+      timeEl.appendChild(opt);
+    });
+
+    for(let m=0;m<12;m++){
+      monthsEl.appendChild(renderMonth(year, m));
+    }
+
+    renderRight();
+  }
+
+  function renderMonth(y, m){
+    const wrap = document.createElement("div");
+    wrap.className = "monthCard";
+
+    const header = document.createElement("div");
+    header.className = "monthHeader";
+
+    const name = document.createElement("div");
+    name.className = "monthName";
+    name.textContent = `${MONTHS_ES[m]} ${y}`;
+
+    const legend = document.createElement("div");
+    legend.className = "legend";
+    legend.textContent = "Click para seleccionar día";
+
+    header.appendChild(name);
+    header.appendChild(legend);
+
+    const grid = document.createElement("div");
+    grid.className = "grid";
+
+    DOW.forEach(d => {
+      const el = document.createElement("div");
+      el.className = "dow";
+      el.textContent = d;
+      grid.appendChild(el);
+    });
+
+    const first = new Date(y, m, 1);
+    const last = new Date(y, m+1, 0);
+    const leading = dowMonFirst(first);
+    const totalDays = last.getDate();
+
+    const cells = 42;
+    for(let i=0;i<cells;i++){
+      const dayNum = i - leading + 1;
+      const cell = document.createElement("div");
+
+      if(dayNum < 1 || dayNum > totalDays){
+        cell.className = "day muted";
+        cell.innerHTML = `<span class="n"></span><span class="badge"></span>`;
+        grid.appendChild(cell);
+        continue;
+      }
+
+      const d = new Date(y, m, dayNum);
+      const key = fmtISO(d);
+      const dayRes = reservations[key] || {};
+      const count = Object.keys(dayRes).length;
+
+      cell.className = "day";
+      if(selectedDate === key) cell.classList.add("selected");
+
+      cell.innerHTML = `
+        <span class="n">${dayNum}</span>
+        <span class="badge ${count ? "booked":""}">${count ? count : "—"}</span>
+      `;
+
+      cell.addEventListener("click", () => {
+        selectedDate = key;
+        render();
+      });
+
+      grid.appendChild(cell);
+    }
+
+    wrap.appendChild(header);
+    wrap.appendChild(grid);
+    return wrap;
+  }
+
+  function renderRight(){
+    if(!selectedDate){
+      selectedLabel.textContent = "Selecciona un día";
+      dateField.value = "";
+      dayListEl.innerHTML = "—";
+      setStatus("");
+      return;
+    }
+
+    const d = new Date(selectedDate + "T00:00:00");
+    const fmt = new Intl.DateTimeFormat("es-MX", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
+    selectedLabel.textContent = fmt.format(d);
+    dateField.value = selectedDate;
+
+    const dayRes = reservations[selectedDate] || {};
+    const keys = Object.keys(dayRes).sort();
+
+    if(keys.length === 0){
+      dayListEl.innerHTML = "<span class='pill bad'>Sin reservas</span>";
+      return;
+    }
+
+    dayListEl.innerHTML = keys.map(h => {
+      const r = dayRes[h];
+      return `
+        <div class="item">
+          <div class="itemTop">
+            <div><b>${h}</b> · ${escapeHTML(r.place || "Sin lugar")}</div>
+            <span class="pill ok">Reservado</span>
+          </div>
+          <div class="msg">
+            ${r.name ? "Nombre: <b>"+escapeHTML(r.name)+"</b> · " : ""}
+            ${r.phone ? "Tel: <b>"+escapeHTML(r.phone)+"</b>" : ""}
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function book(){
+    if(!selectedDate) return setStatus("Primero selecciona un día.", "bad");
+
+    const time = timeEl.value;
+    const place = placeEl.value.trim();
+
+    if(!time) return setStatus("Selecciona una hora.", "bad");
+    if(!place) return setStatus("Escribe el lugar.", "bad");
+
+    reservations[selectedDate] = reservations[selectedDate] || {};
+    if(reservations[selectedDate][time]){
+      return setStatus("Esa hora ya está reservada. Elige otra.", "bad");
+    }
+
+    const name = nameEl.value.trim();
+    const phone = phoneEl.value.trim();
+
+    reservations[selectedDate][time] = {
+      place,
+      name,
+      phone,
+      createdAt: new Date().toISOString(),
+      date: selectedDate,
+      time
+    };
+
+    save();
+    setStatus(`Reserva guardada: ${selectedDate} ${time} · ${place}`, "ok");
+    renderRight();
+    render();
+  }
+
+  function cancelBooking(){
+    if(!selectedDate) return setStatus("Selecciona un día.", "bad");
+    const time = timeEl.value;
+    if(!time) return setStatus("Selecciona una hora.", "bad");
+
+    const dayRes = reservations[selectedDate] || {};
+    if(!dayRes[time]) return setStatus("No hay reserva en esa hora.", "bad");
+
+    delete dayRes[time];
+    if(Object.keys(dayRes).length === 0) delete reservations[selectedDate];
+
+    save();
+    setStatus(`Reserva cancelada: ${selectedDate} ${time}`, "ok");
+    renderRight();
+    render();
+  }
+
+  function exportJSON(){
+    const data = JSON.stringify(reservations, null, 2);
+    const blob = new Blob([data], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `reservas_${year}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setStatus("Exportado JSON.", "ok");
+  }
+
+  function clearAll(){
+    reservations = {};
+    selectedDate = null;
+    save();
+    setStatus("Se borraron todas las reservas.", "ok");
+    render();
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
